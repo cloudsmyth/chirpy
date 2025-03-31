@@ -3,15 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"sync/atomic"
-
-	"github.com/cloudsmyth/chirpy/internal/database"
 )
-
-type apiConfig struct {
-	fileServerHits atomic.Int32
-	dbQueries      *database.Queries
-}
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -35,7 +27,13 @@ func (cfg *apiConfig) metricShowHandler(w http.ResponseWriter, r *http.Request) 
 
 func (cfg *apiConfig) metricResetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if cfg.platform != "dev" {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Reset is only allowed in dev!"))
+		return
+	}
 	w.WriteHeader(http.StatusOK)
+	cfg.dbQueries.Reset(r.Context())
 	cfg.fileServerHits.Store(0)
 	w.Write([]byte("Counter reset to 0"))
 }
