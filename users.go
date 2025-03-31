@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloudsmyth/chirpy/internal/auth"
+	"github.com/cloudsmyth/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -15,13 +17,15 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-func (cfg *apiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
+type response struct {
+	User
+}
+
+func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type parameters struct {
-		Email string `json:"email"`
-	}
-	type response struct {
-		User
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -31,7 +35,53 @@ func (cfg *apiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := cfg.dbQueries.CreateUser(r.Context(), params.Email)
+	user, err := cfg.dbQueries.GetUserByEmail(r.Context(), params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Could not get user with that email", err)
+		return
+	}
+
+	err = auth.CheckHashedPassword(user.HashedPassword, params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		return
+	} else {
+		respondWithJson(w, http.StatusOK, response{
+			User: User{
+				ID:        user.ID,
+				CreatedAt: user.CreatedAt,
+				UpdatedAt: user.UpdatedAt,
+				Email:     user.Email,
+			},
+		})
+	}
+}
+
+func (cfg *apiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	type parameters struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	if err := decoder.Decode(&params); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not decode parameters", err)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not hash password", err)
+		return
+	}
+
+	arg := database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	}
+	user, err := cfg.dbQueries.CreateUser(r.Context(), arg)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not create new user", err)
 		return
