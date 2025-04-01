@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudsmyth/chirpy/internal/auth"
 	"github.com/cloudsmyth/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -77,11 +78,22 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) chirpsHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type chirpParameters struct {
-		Body   string    `json:"body"`
-		UserId uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type chirpResponse struct {
 		Chirp
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Unable to process request header", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized user", err)
+		return
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -107,7 +119,7 @@ func (cfg *apiConfig) chirpsHandler(w http.ResponseWriter, r *http.Request) {
 
 	arg := database.CreateChirpParams{
 		Body:   msg,
-		UserID: params.UserId,
+		UserID: userID,
 	}
 
 	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), arg)
