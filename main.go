@@ -5,19 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync/atomic"
 
+	"github.com/cloudsmyth/chirpy/internal/api"
 	"github.com/cloudsmyth/chirpy/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
-
-type apiConfig struct {
-	fileServerHits atomic.Int32
-	dbQueries      *database.Queries
-	platform       string
-	secret         string
-}
 
 func main() {
 	godotenv.Load()
@@ -35,24 +28,25 @@ func main() {
 	port := "8080"
 	mux := http.NewServeMux()
 
-	apiCfg := &apiConfig{
-		dbQueries: dbQueries,
-		platform:  platform,
-		secret:    jwtSecret,
+	apiCfg := &api.ApiConfig{
+		DbQueries: dbQueries,
+		Platform:  platform,
+		Secret:    jwtSecret,
 	}
 
 	handler := http.StripPrefix("/app", http.FileServer(http.Dir(".")))
-	mux.Handle("/app/", apiCfg.incrementHits(handler))
+	mux.Handle("/app/", apiCfg.IncrementHits(handler))
 	mux.HandleFunc("GET /api/healthz", healthCheckHandler)
-	mux.HandleFunc("GET /admin/metrics", apiCfg.metricShowHandler)
-	mux.HandleFunc("POST /admin/reset", apiCfg.metricResetHandler)
-	mux.HandleFunc("POST /api/chirps", apiCfg.chirpsHandler)
-	mux.HandleFunc("POST /api/users", apiCfg.addUserHandler)
-	mux.HandleFunc("GET /api/chirps", apiCfg.getChirpsHandler)
-	mux.HandleFunc("GET /api/chirps/{chirpId}", apiCfg.getChirpByIdHandler)
-	mux.HandleFunc("POST /api/login", apiCfg.loginHandler)
-	mux.HandleFunc("POST /api/refresh", apiCfg.refreshHandler)
-	mux.HandleFunc("POST /api/revoke", apiCfg.revokeHandler)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.MetricShowHandler)
+	mux.HandleFunc("POST /admin/reset", apiCfg.MetricResetHandler)
+	mux.HandleFunc("POST /api/chirps", apiCfg.CreateChirpsHandler)
+	mux.HandleFunc("POST /api/users", apiCfg.AddUserHandler)
+	mux.HandleFunc("PUT /api/users", apiCfg.UpdateUserHandler)
+	mux.HandleFunc("GET /api/chirps", apiCfg.GetChirpsHandler)
+	mux.HandleFunc("GET /api/chirps/{chirpId}", apiCfg.GetChirpByIdHandler)
+	mux.HandleFunc("POST /api/login", apiCfg.LoginHandler)
+	mux.HandleFunc("POST /api/refresh", apiCfg.RefreshHandler)
+	mux.HandleFunc("POST /api/revoke", apiCfg.RevokeHandler)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -63,4 +57,10 @@ func main() {
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }

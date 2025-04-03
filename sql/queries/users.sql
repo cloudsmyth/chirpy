@@ -11,3 +11,12 @@ returning *;
 
 -- name: GetUserByEmail :one
 select * from users where email = $1;
+
+-- name: GetUserById :one
+select * from users where id = $1;
+
+-- name: UpdateUserById :one
+update users
+set (email, hashed_password, updated_at) = ($1, $2, NOW())
+where id = $3
+returning *;

@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ type responseBody struct {
 	Clean string `json:"cleaned_body"`
 }
 
-func respondWithJson(w http.ResponseWriter, code int, resp interface{}) {
+func RespondWithJson(w http.ResponseWriter, code int, resp interface{}) {
 	response, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s\n", err)
@@ -30,7 +30,7 @@ func respondWithJson(w http.ResponseWriter, code int, resp interface{}) {
 	w.Write(response)
 }
 
-func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
+func RespondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	if err != nil {
 		log.Printf("Error: %s\n", err)
 	}
@@ -40,12 +40,12 @@ func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	type errorResponse struct {
 		Error string `json:"error"`
 	}
-	respondWithJson(w, code, errorResponse{
+	RespondWithJson(w, code, errorResponse{
 		Error: msg,
 	})
 }
 
-func stringInMap(s string, m map[string]bool) bool {
+func StringInMap(s string, m map[string]bool) bool {
 	_, exists := m[s]
 	return exists
 }
