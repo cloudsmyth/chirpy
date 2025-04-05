@@ -20,3 +20,9 @@ update users
 set (email, hashed_password, updated_at) = ($1, $2, NOW())
 where id = $3
 returning *;
+
+-- name: UpgradeUserById :one
+update users
+set (is_chirpy_red, updated_at) = ($1, NOW())
+where id = $2
+returning *;

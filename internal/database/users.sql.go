@@ -20,7 +20,7 @@ values (
 	$1,
 	$2
 )
-returning id, created_at, updated_at, email, hashed_password
+returning id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -37,12 +37,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-select id, created_at, updated_at, email, hashed_password from users where email = $1
+select id, created_at, updated_at, email, hashed_password, is_chirpy_red from users where email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -54,12 +55,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserById = `-- name: GetUserById :one
-select id, created_at, updated_at, email, hashed_password from users where id = $1
+select id, created_at, updated_at, email, hashed_password, is_chirpy_red from users where id = $1
 `
 
 func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
@@ -71,6 +73,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -79,7 +82,7 @@ const updateUserById = `-- name: UpdateUserById :one
 update users
 set (email, hashed_password, updated_at) = ($1, $2, NOW())
 where id = $3
-returning id, created_at, updated_at, email, hashed_password
+returning id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type UpdateUserByIdParams struct {
@@ -97,6 +100,33 @@ func (q *Queries) UpdateUserById(ctx context.Context, arg UpdateUserByIdParams) 
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
+	)
+	return i, err
+}
+
+const upgradeUserById = `-- name: UpgradeUserById :one
+update users
+set (is_chirpy_red, updated_at) = ($1, NOW())
+where id = $2
+returning id, created_at, updated_at, email, hashed_password, is_chirpy_red
+`
+
+type UpgradeUserByIdParams struct {
+	IsChirpyRed bool
+	ID          uuid.UUID
+}
+
+func (q *Queries) UpgradeUserById(ctx context.Context, arg UpgradeUserByIdParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, upgradeUserById, arg.IsChirpyRed, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }

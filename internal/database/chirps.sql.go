@@ -41,6 +41,21 @@ func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp
 	return i, err
 }
 
+const deleteChirpById = `-- name: DeleteChirpById :exec
+delete from chirps 
+where id = $1 and user_id = $2
+`
+
+type DeleteChirpByIdParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) DeleteChirpById(ctx context.Context, arg DeleteChirpByIdParams) error {
+	_, err := q.db.ExecContext(ctx, deleteChirpById, arg.ID, arg.UserID)
+	return err
+}
+
 const getChirpById = `-- name: GetChirpById :one
 select id, body, created_at, updated_at, user_id from chirps where id = $1
 `

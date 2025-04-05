@@ -41,10 +41,11 @@ func (cfg *ApiConfig) AddUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	common.RespondWithJson(w, http.StatusCreated, UserResponse{
 		User: User{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
+			ID:          user.ID,
+			CreatedAt:   user.CreatedAt,
+			UpdatedAt:   user.UpdatedAt,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
 		},
 	})
 }
