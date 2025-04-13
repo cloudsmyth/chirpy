@@ -2,8 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/cloudsmyth/chirpy/internal/auth"
 	"github.com/cloudsmyth/chirpy/internal/common"
 	"github.com/cloudsmyth/chirpy/internal/database"
 	"github.com/google/uuid"
@@ -18,6 +20,17 @@ type webhookRequest struct {
 
 func (cfg *ApiConfig) UpgradeChirpyRedHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	apiKey, err := auth.GetApiKey(r.Header)
+	if err != nil {
+		common.RespondWithError(w, http.StatusUnauthorized, "Could not get api key", err)
+		return
+	}
+
+	if apiKey != cfg.Polka {
+		common.RespondWithError(w, http.StatusUnauthorized, "Incorrect API key", errors.New("Incorrect api key"))
+		return
+	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := webhookRequest{}
